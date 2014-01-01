@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        <script type="text/javascript" src="scratch-card.js"></script>
+        <style type="text/css">
+            body{margin: 0;}
+        </style>
+    </head>
+    <body>
+        <div id="scratch-card"></div>
+
+        <script type="text/javascript">
+            new ScratchCard({
+                container: document.getElementById('scratch-card'),
+                imgSrc: 'http://b.zol-img.com.cn/desk/bizhi/image/1/960x600/1347976633387.jpg?v='+ Math.random(),
+                size: [320, 240],
+                validArea: [0, 0, 100, 100],
+                percentage: 0.6
+            });
+
+            // var img = new Image();
+
+            // img.onload = function(){
+            //     alert(111)
+            //     document.body.appendChild(img);
+            // }
+
+            // img.src = 'http://b.zol-img.com.cn/desk/bizhi/image/1/960x600/1347976633387.jpg'
+        </script>
+    </body>
+</html>
