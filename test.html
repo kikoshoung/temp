@@ -4,6 +4,8 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
         <title>Scratch Card</title>
+        <script type="text/javascript" src="scratch-card.js"></script>
+        
         <style type="text/css">
             body{
                 margin: 0;
@@ -26,12 +28,12 @@
         </style>
     </head>
     <body>
+
         <div style="margin: 50px auto; width: 240px;">
             <div id="scratch-card" class="container"></div>
             <button class="btn" id="scratch-again">再刮一次</button>
         </div>
 
-        <script type="text/javascript" src="scratch-card.js"></script>
         <script type="text/javascript">
             var resImg = ['face-smile.png', 'face-sad.png'],
                 container = document.getElementById('scratch-card'),
@@ -40,19 +42,20 @@
                 events = {
                     click: isPC ? 'click' : 'touchstart',
                     mousemove: isPC ? 'mousemove' : 'touchmove'
-                };
+                },
+                scratchCard;
 
             function addScratchCard(){
                 var won = Math.random() > 0.5 ? true : false;
 
                 container.innerHTML = '';
-                new ScratchCard({
+                scratchCard = new ScratchCard({
                     container: container,
                     imgSrc: won ? resImg[0] : resImg[1],
                     size: [240, 180],
                     validArea: [45, 15, 150, 150],
                     percentage: 0.4,
-                    onScratched: function(){
+                    onComplete: function(){
                         if(won) alert('我去，中奖了！')
                     }
                     // background: 'yellow',
@@ -62,6 +65,7 @@
             }
 
             scratchAgain.addEventListener(events['click'], function(e){
+                scratchCard.destroy();
                 container.innerHTML = '正在生成刮刮卡...'
                 addScratchCard();
             });

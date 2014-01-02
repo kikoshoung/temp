@@ -264,16 +264,17 @@
 
 			canvas.addEventListener(events['mouseup'], function(e){
 				self.mouseupHandler(e);
+				self.isOktoShowAll(self.getScratchedPercentage());
 			});
 
 			canvas.addEventListener('mouseout', function(e){
-				self.mouseupHandler(e);
+				// self.mouseupHandler(e);
 				self.mouseoutHandler(e);
 			});
 
 			container.addEventListener(events['mousemove'], function(e){
 				e.preventDefault();
-			})
+			});
 		},
 
 		mousedownHandler: function(e){
@@ -309,9 +310,7 @@
 			var ctx = this.ctx;
 
 			this.scratchActivated = false;
-			ctx.closePath();
-
-			this.isOktoShowAll(this.getScratchedPercentage());
+			ctx.closePath();			
 		},
 
 		mouseoutHandler: function(e){
@@ -320,17 +319,28 @@
 
 		isOktoShowAll: function(curPercentage){
 			var options = this.options,
-				onScratched = options.onScratched;
+				onComplete = options.onComplete;
 
 			if(curPercentage >= options.percentage){
 				this.showAll();
-				onScratched && onScratched();
-				onScratched = null;
+				onComplete && onComplete();
+				onComplete = null;
 			}
 		},
 
 		showAll: function(){
 			this.canvas.style.display = 'none';
+		},
+
+		destroy: function(){
+			var container = this.container,
+				canvas = this.canvas;
+
+			canvas.removeEventListener(events['mousedown']);
+			canvas.removeEventListener(events['mousemove']);
+			canvas.removeEventListener(events['mouseup']);
+			canvas.removeEventListener('mouseout');
+			container.removeEventListener(events['mousemove']);
 		}
 	};
 
