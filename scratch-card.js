@@ -5,16 +5,73 @@
 	function ScratchCard(options){
 		this.options = options;
 		this.scratchActivated = false;
+		this.extendOptions();
 		this.initialize();
+	};
+
+	function clone(original){
+        if(typeof original != 'object' || !original || original.nodeType) return original;
+
+        var clonedObject = original.constructor === Array ? [] : {};
+
+        for(var i in original){
+        	clonedObject[i] = arguments.callee(original[i])
+        }
+
+        return clonedObject;
+	}
+
+	function extend(target, defaults){
+        var extended = clone(defaults);
+
+        for(var j in target){
+            if(extended[j] instanceof Object && target[j]){
+                if(extended[j] instanceof Array){
+                        extended[j] = clone(target[j]);
+                } else {
+                        extended[j] = arguments.callee(target[j], extended[j]);
+                }
+            } else {
+                extended[j] = target[j];
+            }
+        }
+        return extended;
+	};
+
+	function getOffset(elem){
+		var offset = [elem.offsetLeft, elem.offsetTop],
+			parent = elem.offsetParent;
+
+		while(parent){
+			offset[0] += parent.offsetLeft;
+			offset[1] += parent.offsetTop;
+			parent = parent.offsetParent;
+		}
+
+		return offset;
 	};
 
 	// prototype of constructor ScratchCard
 	ScratchCard.prototype = {
+
+		defaults: {
+			percentage: 0.6,
+			text: '刮开此涂层',
+			background: '#e0e0e0',
+			color: '#888',
+			notSupportText: 'Sorry, your browser dose not support [Canvas], please use a higher version browser and try again.'
+		},
+
 		events: {
 			mousedown: isPC ? 'mousedown' : 'touchstart',
 			mousemove: isPC ? 'mousemove' : 'touchmove',
 			mouseup: isPC ? 'mouseup' : 'touchend'
 		},
+
+		extendOptions: function(){
+			this.options = extend(this.options, this.defaults);
+		},
+
 		initialize: function(){
 			var options = this.options,
 				self = this;
@@ -23,8 +80,8 @@
 				this.setImage(options, function(){
 					self.setContainer(options);
 					self.setCanvas(options);
-					self.setCanvasContext();
-					self.bindCanvasEvents();
+					self.initCanvas();
+					self.bindEvents();
 				});
 			};
 		},
@@ -37,7 +94,7 @@
 				validArea = options.validArea,
 				percentage = options.percentage;
 
-			if(!(container && container instanceof HTMLElement)){
+			if(!(container && container.nodeType && container.nodeType == 1)){
 				throw new Error('Param [container] must be given and must be a dom element.');
 				return false;
 			}
@@ -100,7 +157,6 @@
 
 			img.src = options.imgSrc;
 
-
 			this.img = img;
 		},
 
@@ -110,34 +166,23 @@
 				canvas = document.createElement('canvas'),
 				cssText = 'position: absolute; z-index: 2; top: 0; left: 0;'
 
-			canvas.innerHTMl = 'Sorry, your browser dose not sypport [Canvas], please use a higher version browser and try again.'
-			canvas.width = this.curSize[0];
-			canvas.height = this.curSize[1];
+			canvas.innerHTML = options.notSupportText;
 			canvas.style.cssText = cssText;
+			canvas.width = canvas.style.width = this.curSize[0];
+			canvas.height = canvas.style.height = this.curSize[1];
 			container.appendChild(canvas);
 
 			this.canvas = canvas;
-
-			// HTML5 tag shim, use this hack to set canvas's style
-			// in browsers which do not support Canvas.
-			document.createElement('canvas');
 		},
 
-		setCanvasContext: function(){
-			var canvas = this.canvas,
-				ctx = this.ctx = canvas.getContext('2d');
+		setCanvasToErrorMode: function(){
+			// HTML5 tag shim, use this hack to set canvas's style
+			// in browsers which do not support Canvas.
+			// document.createElement('canvas');
+			var defaults = this.defaults;
 
-			this.canvasOffset = this.getOffset(canvas);
-
-			ctx.globalCompositeOperation = "source-over";
-
-			ctx.fillStyle = '#e0e0e0';
-			ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-			ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
-			ctx.lineJoin = 'round';
-			ctx.lineCap = 'round';
-			ctx.lineWidth = 30; 
+			this.canvas.style.background = defaults.background;
+			this.canvas.style.color = defaults.color;
 		},
 
 		// get the dom(container, image, canvas) size[{width}, {height}]
@@ -149,41 +194,65 @@
 			return (size || origSize).slice();
 		},
 
-		getOffset: function(elem){
-			var offset = [elem.offsetLeft, elem.offsetTop],
-				parent = elem.offsetParent;
-
-			while(parent){
-				offset[0] += parent.offsetLeft;
-				offset[1] += parent.offsetTop;
-				parent = parent.offsetParent;
-			}
-
-			return offset;
-		},
-
 		getScratchedPercentage: function(){
 			var ctx = this.ctx,
 				canvas = this.canvas,
 				options = this.options,
 				validArea = options.validArea || [0, 0, canvas.width, canvas.height],
-				imageData = this.ctx.getImageData.apply(this.ctx, validArea).data,
+				imageData = ctx.getImageData.apply(ctx, validArea).data,
 				validScratchedPx = 0;
-			
 
 			for(var i = 0, len = imageData.length; i < len; i += 4){
-				if(imageData[i] == 0) validScratchedPx++;
+				if(imageData[i + 3] == 0) validScratchedPx++;
 			}
 
 			return validScratchedPx / (len / 4);
 		},
 
-		bindCanvasEvents: function(){
+		getCoordinate: function(event){
+			if(event.targetTouches) event = event.targetTouches[0];
+			return [event.pageX, event.pageY];
+		},
+
+		initCanvas: function(){
 			var canvas = this.canvas,
+				options = this.options,
+				ctx;
+
+			try{
+				ctx = this.ctx = canvas.getContext('2d');
+			} catch(err) {
+				this.setCanvasToErrorMode();
+				throw new Error(options.notSupportText);
+			}
+
+			this.canvasOffset = getOffset(canvas);
+
+			ctx.globalCompositeOperation = "source-over";
+
+			// Paint canvas to gray 
+			ctx.fillStyle = options.background;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+			// Paint extra text on canvas
+			ctx.font = '30px Verdana';
+			ctx.textBaseline = 'middle';
+			ctx.textAlign = 'center';
+			ctx.fillStyle = options.color;
+			ctx.fillText(options.text, canvas.width / 2, canvas.height / 2);
+
+			// Set stroke style
+			ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+			ctx.lineJoin = 'round';
+			ctx.lineCap = 'round';
+			ctx.lineWidth = 30; 
+		},
+
+		bindEvents: function(){
+			var canvas = this.canvas,
+				container = this.container,
 				events = this.events,
 				self = this;
-
-			console.log(events['mousedown'])
 
 			canvas.addEventListener(events['mousedown'], function(e){
 				self.mousedownHandler(e);
@@ -201,28 +270,39 @@
 				self.mouseupHandler(e);
 				self.mouseoutHandler(e);
 			});
+
+			container.addEventListener(events['mousemove'], function(e){
+				e.preventDefault();
+			})
 		},
 
 		mousedownHandler: function(e){
 			var ctx = this.ctx,
-				canvasOffset = this.canvasOffset;
+				canvasOffset = this.canvasOffset,
+				pageCoordinate = this.getCoordinate(e);
 
 			this.scratchActivated = true;
 			ctx.beginPath();
-			ctx.moveTo(e.pageX - canvasOffset[0], e.pageY - canvasOffset[1]);
+			ctx.moveTo(pageCoordinate[0] - canvasOffset[0], pageCoordinate[1] - canvasOffset[1]);
 		},
 
 		mousemoveHandler: function(e){
 			if(!this.scratchActivated) return;
 
 			var ctx = this.ctx,
-				canvasOffset = this.canvasOffset;
+				canvas = this.canvas,
+				canvasOffset = this.canvasOffset,
+				pageCoordinate = this.getCoordinate(e);
 
-			e.preventDefault();
-
-			ctx.lineTo(e.pageX - canvasOffset[0], e.pageY - canvasOffset[1]);
+			ctx.lineTo(pageCoordinate[0] - canvasOffset[0], pageCoordinate[1] - canvasOffset[1]);
 			ctx.globalCompositeOperation = "destination-out";
 			ctx.stroke();
+
+			if(canvas.style.opacity){
+				canvas.style.opacity = '';
+			} else {
+				canvas.style.opacity = '0.999';
+			}
 		},
 
 		mouseupHandler: function(e){
@@ -239,11 +319,13 @@
 		},
 
 		isOktoShowAll: function(curPercentage){
-			var percentage = this.options.percentage;
+			var options = this.options,
+				onScratched = options.onScratched;
 
-			percentage = percentage || 0.8;
-			if(curPercentage >= percentage){
+			if(curPercentage >= options.percentage){
 				this.showAll();
+				onScratched && onScratched();
+				onScratched = null;
 			}
 		},
 

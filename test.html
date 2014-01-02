@@ -3,31 +3,75 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-        <script type="text/javascript" src="scratch-card.js"></script>
+        <title>Scratch Card</title>
         <style type="text/css">
-            body{margin: 0;}
+            body{
+                margin: 0;
+            }
+            .container{
+                text-align: center;
+                line-height: 180px;
+            }
+            .btn{
+                display: block;
+                width: 100%;
+                margin-top: 30px;
+                padding: 10px 0;
+                background: green;
+                color: white;
+                font-size: 20px;
+                border: none;
+                outline: none;
+            }
         </style>
     </head>
     <body>
-        <div id="scratch-card"></div>
+        <div style="margin: 50px auto; width: 240px;">
+            <div id="scratch-card" class="container"></div>
+            <button class="btn" id="scratch-again">再刮一次</button>
+        </div>
 
+        <script type="text/javascript" src="scratch-card.js"></script>
         <script type="text/javascript">
-            new ScratchCard({
-                container: document.getElementById('scratch-card'),
-                imgSrc: 'http://b.zol-img.com.cn/desk/bizhi/image/1/960x600/1347976633387.jpg?v='+ Math.random(),
-                size: [320, 240],
-                validArea: [0, 0, 100, 100],
-                percentage: 0.6
+            var resImg = ['face-smile.png', 'face-sad.png'],
+                container = document.getElementById('scratch-card'),
+                scratchAgain = document.getElementById('scratch-again'),
+                isPC = ('ontouchstart' in window) ? false : true,
+                events = {
+                    click: isPC ? 'click' : 'touchstart',
+                    mousemove: isPC ? 'mousemove' : 'touchmove'
+                };
+
+            function addScratchCard(){
+                var won = Math.random() > 0.5 ? true : false;
+
+                container.innerHTML = '';
+                new ScratchCard({
+                    container: container,
+                    imgSrc: won ? resImg[0] : resImg[1],
+                    size: [240, 180],
+                    validArea: [45, 15, 150, 150],
+                    percentage: 0.4,
+                    onScratched: function(){
+                        if(won) alert('我去，中奖了！')
+                    }
+                    // background: 'yellow',
+                    // text: '骚年来一发吧',
+                    // color: 'red'
+                });
+            }
+
+            scratchAgain.addEventListener(events['click'], function(e){
+                container.innerHTML = '正在生成刮刮卡...'
+                addScratchCard();
             });
 
-            // var img = new Image();
+            document.addEventListener(events['mousemove'], function(e){
+                e.preventDefault();
+            });
 
-            // img.onload = function(){
-            //     alert(111)
-            //     document.body.appendChild(img);
-            // }
+            addScratchCard();
 
-            // img.src = 'http://b.zol-img.com.cn/desk/bizhi/image/1/960x600/1347976633387.jpg'
         </script>
     </body>
 </html>
