@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
         <title>Scratch Card</title>
-        <script type="text/javascript" src="scratch-card.js"></script>
+        <script type="text/javascript" src="scratch-card.js?v=3"></script>
 
         <style type="text/css">
             body{
@@ -45,6 +45,14 @@
                 },
                 scratchCard;
 
+            function addEvent(elem, eventName, callback, useCapture){
+                if(elem.addEventListener){
+                    elem.addEventListener(eventName, callback, useCapture)
+                } else if (elem.attachEvent) {
+                    elem.attachEvent('on' + eventName, callback)
+                }
+            }
+
             function addScratchCard(){
                 var won = Math.random() > 0.5 ? true : false;
 
@@ -56,21 +64,23 @@
                     validArea: [45, 15, 150, 150],
                     percentage: 0.4,
                     onComplete: function(){
+                        console.log(won)
                         if(won) alert('我去，中奖了！')
-                    }
+                    },
                     // background: 'yellow',
                     // text: '骚年来一发吧',
-                    // color: 'red'
+                    notSupportText: '亲~该换换浏览器了'
+                    // color: 'red',
                 });
             }
 
-            scratchAgain.addEventListener(events['click'], function(e){
+            addEvent(scratchAgain, events['click'], function(e){
                 scratchCard.destroy();
-                container.innerHTML = '正在生成刮刮卡...'
+                container.innerHTML = '正在生成刮刮卡...';
                 addScratchCard();
             });
 
-            document.addEventListener(events['mousemove'], function(e){
+            addEvent(document, events['mousemove'], function(e){
                 e.preventDefault();
             });
 

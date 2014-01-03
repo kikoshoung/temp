@@ -53,7 +53,6 @@
 
 	// prototype of constructor ScratchCard
 	ScratchCard.prototype = {
-
 		defaults: {
 			percentage: 0.6,
 			text: '刮开此涂层',
@@ -248,36 +247,40 @@
 			ctx.lineWidth = 30; 
 		},
 
+		bind: function(func, context){
+			return function(){
+				func.apply(context, arguments);
+			}
+		},
+
+		addEvent: function(elem, eventName, callback, useCapture){
+			if(elem.addEventListener){
+	            elem.addEventListener(eventName, callback, useCapture)
+	        } else if (elem.attachEvent) {
+	            elem.attachEvent('on' + eventName, callback)
+	        }
+		},
+
 		bindEvents: function(){
 			var canvas = this.canvas,
 				container = this.container,
 				events = this.events,
-				self = this;
+				self = this,
+				bind = this.bind,
+				canvasMousedownHandler = bind(this.canvasMousedownHandler, this),
+				canvasMousemoveHandler = bind(this.canvasMousemoveHandler, this),
+				canvasMouseupHandler = bind(this.canvasMouseupHandler, this),
+				canvasMouseoutHandler = bind(this.canvasMouseoutHandler, this),
+				containerMousemoveHandler = bind(this.containerMousemoveHandler, this);
 
-			canvas.addEventListener(events['mousedown'], function(e){
-				self.mousedownHandler(e);
-			});
-
-			canvas.addEventListener(events['mousemove'], function(e){
-				self.mousemoveHandler(e);
-			});
-
-			canvas.addEventListener(events['mouseup'], function(e){
-				self.mouseupHandler(e);
-				self.isOktoShowAll(self.getScratchedPercentage());
-			});
-
-			canvas.addEventListener('mouseout', function(e){
-				// self.mouseupHandler(e);
-				self.mouseoutHandler(e);
-			});
-
-			container.addEventListener(events['mousemove'], function(e){
-				e.preventDefault();
-			});
+			this.addEvent(canvas, events['mousedown'], canvasMousedownHandler);
+			this.addEvent(canvas, events['mousemove'], canvasMousemoveHandler);
+			this.addEvent(canvas, events['mouseup'], canvasMouseupHandler);
+			this.addEvent(canvas, 'mouseout', canvasMouseoutHandler);
+			this.addEvent(container, events['mousemove'], containerMousemoveHandler);
 		},
 
-		mousedownHandler: function(e){
+		canvasMousedownHandler: function(e){
 			var ctx = this.ctx,
 				canvasOffset = this.canvasOffset,
 				pageCoordinate = this.getCoordinate(e);
@@ -287,7 +290,7 @@
 			ctx.moveTo(pageCoordinate[0] - canvasOffset[0], pageCoordinate[1] - canvasOffset[1]);
 		},
 
-		mousemoveHandler: function(e){
+		canvasMousemoveHandler: function(e){
 			if(!this.scratchActivated) return;
 
 			var ctx = this.ctx,
@@ -306,25 +309,34 @@
 			}
 		},
 
-		mouseupHandler: function(e){
-			var ctx = this.ctx;
-
-			this.scratchActivated = false;
-			ctx.closePath();			
+		canvasMouseupHandler: function(e){
+			this.strokeCompleteHandler();
+			this.checkIsOktoShowAll(this.getScratchedPercentage());
 		},
 
-		mouseoutHandler: function(e){
-			this.scratchActivated = false;
+		canvasMouseoutHandler: function(e){
+			this.strokeCompleteHandler();
+			// if(isPC) this.checkIsOktoShowAll(this.getScratchedPercentage());
 		},
 
-		isOktoShowAll: function(curPercentage){
+		containerMousemoveHandler: function(e){
+			e.preventDefault();
+		},
+
+		strokeCompleteHandler: function(){
+			this.scratchActivated = false;
+			this.ctx.closePath();
+		},
+
+		checkIsOktoShowAll: function(curPercentage){
 			var options = this.options,
 				onComplete = options.onComplete;
 
 			if(curPercentage >= options.percentage){
 				this.showAll();
 				onComplete && onComplete();
-				onComplete = null;
+				this.canvasMouseoutHandler = null;
+				this.canvasMouseupHandler = null;
 			}
 		},
 
@@ -334,13 +346,14 @@
 
 		destroy: function(){
 			var container = this.container,
-				canvas = this.canvas;
+				canvas = this.canvas,
+				events = this.events;
 
-			canvas.removeEventListener(events['mousedown']);
-			canvas.removeEventListener(events['mousemove']);
-			canvas.removeEventListener(events['mouseup']);
-			canvas.removeEventListener('mouseout');
-			container.removeEventListener(events['mousemove']);
+			canvas.removeEventListener(events['mousedown'], this.canvasMousedownHandler);
+			canvas.removeEventListener(events['mousemove'], this.canvasMousemoveHandler);
+			canvas.removeEventListener(events['mouseup'], this.canvasMouseupHandler);
+			canvas.removeEventListener('mouseout', this.canvasMouseoutHandler);
+			container.removeEventListener(events['mousemove'], this.containerMousemoveHandler);
 		}
 	};
 
